@@ -42,15 +42,15 @@ var app = function() {
   var filter = function(data) {
   //return checker.test(data);
   return /\<|\>|\(.*\)|\=|TEST/.test(data) || (data === "") || (data === undefined);
-  }
+}
 
-  var send = function() {
-    var message = {};
-    message.text = $('#text').val();
-    var usr = window.location.search;
-    message.username = usr.substring(10, usr.length);
-    message.roomname = "basement";
-    $.ajax({
+var send = function() {
+  var message = {};
+  message.text = $('#text').val();
+  var usr = window.location.search;
+  message.username = usr.substring(10, usr.length);
+  message.roomname = $('#room').val();
+  $.ajax({
     // always use this url
     url: 'https://api.parse.com/1/classes/chatterbox',
     type: 'POST',
@@ -63,13 +63,15 @@ var app = function() {
       // see: https://developer.mozilla.org/en-US/docs/Web/API/console.error
       console.error('chatterbox: Failed to send message');
     }
-    });
-  }
+  });
+}
 
-var displayMessage = function(data) {
+var bubbleData;
+
+var prepMessage = function(data) {
   var messages = data.results, msg;
     // console.log(messages);
-  var clean = [];
+    var clean = [];
     for(var i = 0; i < messages.length; i++) {
       msg = new Message(messages[i]);
       if(!filter(msg.text) && !filter(msg.username)) {
@@ -77,53 +79,62 @@ var displayMessage = function(data) {
         clean.push(msg);
       }
     };
-    makeBubbles(clean);
+    return clean;
+};
+var filterMessages = function(id) {
+  var collection = [];
+  bubbleData.forEach(function(element) {
+    if(element.room === id) {
+      collection.push(element.printHTML());
+    }
+  })
+  var htmlString = '<table>'+collection.join('')+'</table>'
+  return htmlString;
+}
+
+var displayMessage = function(data) {
+    bubbleData = prepMessage(data);
+    var htmlString;
+    window.display();
+    $('.room').mouseenter(function(){
+      var id = $(this).attr('id');
+      htmlString = filterMessages(id)
+      $('.room').avgrund({
+        template: htmlString
+      });
+    })
+    return;
+    // makeBubbles(clean);
+  }
+
+  var getTemplate = function(){
+    console.log('called');
+  }
+
+  var getBubbleData = function(callback){
+    return bubbleData;
   }
 
   return {
     init : init,
     send : send,
-    fetch : fetch
+    fetch : fetch,
+    getBubbleData : getBubbleData
   };
 }();
 
 $(document).on('ready', function(){
-  d3.select('svg').attr({
-  "width": 1280,
-  "height": 760,
-  "border-style" : "solid",
-  "border-width" : "5px"
-  })
+  d3.select('svg')
   $('#send').on('click', function(event){
     event.preventDefault();
-    app.send();
+    app.send()
+    $();
   });
 
-  $('tbody').on('click', function(event){
+  $('svg').on('click', function(event){
     event.preventDefault();
   });
 
+  $('.room').avgrund();
 
 })
-// Need to collect an array of all the rooms--unique names
-// Filter data from fetch() by room name
-  // d3.data(^).append array of objects of EACH room to individual g/svg element
-  // allow for click of room to open queue of messages
-  // attr(radius to data.length)
-  // TO START: create an array of room names, generate a set of bubbles with roomname text
-var basement = [{text, username}]
-// when queue opens, have text area at the bottom
-
-/*
-var makeBubbles = function(msgs){
-  var rooms = {};
-  var numrooms = 0;
-  for(var k = 0; k < msgs.length; k++){
-    if(rooms[msgs[k].room] === undefined) {
-      rooms[msgs[k].room] = 0;
-    }
-    rooms[msgs[k].room] += 1;
-  }
-
-}
-*/
